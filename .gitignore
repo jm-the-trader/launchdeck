@@ -1,0 +1,11 @@
+# Compiled app bundle (produced by ./build.sh)
+LaunchDeck.app/
+*.app/
+
+# Icon build intermediates (source of truth is Icon/make_icon.swift;
+# the rendered AppIcon.icns is committed so build.sh has an icon out of the box)
+AppIcon.iconset/
+icon_1024.png
+
+# macOS
+.DS_Store
