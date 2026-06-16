@@ -8,13 +8,19 @@ extension String {
 }
 
 enum Shell {
-    /// Runs a command through a login zsh (so PATH includes node/python) and
-    /// returns its combined stdout/stderr. Blocking — call off the main thread.
+    /// Runs a command through a login zsh and returns its combined
+    /// stdout/stderr. Blocking — call off the main thread.
+    ///
+    /// Pass `interactive: true` for commands that launch dev servers: it adds
+    /// `-i`, which sources `~/.zshrc`. Version managers like nvm define `npm`
+    /// and `node` there, so without it a detached `npm run dev` fails with
+    /// "command not found" and the frontend never comes up. The lightweight
+    /// non-interactive shell is fine for the frequent port-status polling.
     @discardableResult
-    static func runLogin(_ command: String) -> String {
+    static func runLogin(_ command: String, interactive: Bool = false) -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["-lc", command]
+        process.arguments = [interactive ? "-ilc" : "-lc", command]
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = pipe

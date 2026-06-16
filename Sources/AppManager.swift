@@ -85,7 +85,7 @@ final class AppManager: ObservableObject {
 
         let command = launchCommand(for: app)
         DispatchQueue.global(qos: .userInitiated).async {
-            Shell.runLogin(command)
+            Shell.runLogin(command, interactive: true)   // needs ~/.zshrc for npm/node
         }
     }
 
@@ -113,7 +113,7 @@ final class AppManager: ObservableObject {
 
         let command = "\(killCommand(for: app)); sleep 2; \(launchCommand(for: app))"
         DispatchQueue.global(qos: .userInitiated).async {
-            Shell.runLogin(command)
+            Shell.runLogin(command, interactive: true)   // needs ~/.zshrc for npm/node
         }
     }
 
@@ -136,13 +136,25 @@ final class AppManager: ObservableObject {
         if let custom = app.stopCommand, !custom.isEmpty {
             return "cd \(app.expandedDirectory.shellQuoted) && \(custom)"
         }
+        // Kill whatever owns each port — by *process group* (kill -<pgid>), so a
+        // respawning supervisor goes down with its workers (one `kill -<pgid>`
+        // takes out the whole `start.sh` tree: uvicorn reloader + worker + vite).
+        // SIGTERM first for a clean shutdown, then SIGKILL anything still holding
+        // on a second later.
+        //
+        // NOTE: piped `while read` — NOT `for pid in $pids`. These commands run
+        // under /bin/zsh, which does NOT word-split unquoted parameters, so an
+        // lsof result of multiple PIDs ("4990\n4993") would otherwise be passed
+        // as a single bogus token and nothing gets killed (the "Stop does
+        // nothing" bug). `while read` splits per line in both zsh and bash.
+        let killGroup = "while read -r pid; do " +
+            "pgid=$(ps -o pgid= -p \"$pid\" | tr -d ' '); " +
+            "[ -n \"$pgid\" ] && kill -%@ \"-$pgid\" 2>/dev/null; done"
         return app.ports.map { port in
-            "pids=$(lsof -nP -tiTCP:\(port) -sTCP:LISTEN); " +
-            "if [ -n \"$pids\" ]; then " +
-            "kill $pids 2>/dev/null; sleep 1; " +
-            "pids=$(lsof -nP -tiTCP:\(port) -sTCP:LISTEN); " +
-            "[ -n \"$pids\" ] && kill -9 $pids 2>/dev/null; " +
-            "fi"
+            let lsof = "lsof -nP -tiTCP:\(port) -sTCP:LISTEN"
+            let term = killGroup.replacingOccurrences(of: "%@", with: "TERM")
+            let kill = killGroup.replacingOccurrences(of: "%@", with: "KILL")
+            return "\(lsof) | \(term); sleep 1; \(lsof) | \(kill)"
         }.joined(separator: "; ")
     }
 
