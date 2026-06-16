@@ -144,6 +144,7 @@ struct AppTile: View {
         switch status {
         case .running: return accent.opacity(0.55)
         case .starting: return Color(hex: "f59e0b").opacity(0.5)
+        case .stopping: return Color(hex: "f87171").opacity(0.5)
         case .stopped: return Color.white.opacity(0.08)
         }
     }
@@ -153,6 +154,7 @@ struct AppTile: View {
             switch status {
             case .running: return ("Running", Color(hex: "34d399"))
             case .starting: return ("Starting", Color(hex: "f59e0b"))
+            case .stopping: return ("Stopping…", Color(hex: "f87171"))
             case .stopped: return ("Stopped", Color(hex: "94a3b8"))
             }
         }()

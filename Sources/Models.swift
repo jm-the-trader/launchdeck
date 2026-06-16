@@ -1,7 +1,7 @@
 import Foundation
 
 enum AppStatus: String, Codable {
-    case stopped, starting, running
+    case stopped, starting, running, stopping
 }
 
 /// One launchable project. Decoded from apps.json so you can add apps

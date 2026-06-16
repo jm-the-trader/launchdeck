@@ -10,6 +10,9 @@ final class AppManager: ObservableObject {
     /// Keeps a freshly-launched app showing "Starting" until its port comes up
     /// (or this deadline passes), so polling doesn't snap it back to "Stopped".
     private var pendingUntil: [String: Date] = [:]
+    /// Keeps an app showing "Stopping" while a kill is in flight, so polling
+    /// doesn't flip it back to "Running" before the ports actually drain.
+    private var stoppingUntil: [String: Date] = [:]
     private var timer: Timer?
 
     init() {
@@ -40,6 +43,19 @@ final class AppManager: ObservableObject {
         let now = Date()
         for app in apps {
             let up = Set(app.ports).intersection(listening)
+
+            // Mid-stop: hold "Stopping" until the ports actually drain (or a
+            // safety cap passes). Without this, a poll that still sees the port
+            // listening would flip the tile back to Running while the kill is
+            // in flight — the Stop → Start → Stop flicker.
+            if let until = stoppingUntil[app.id] {
+                if !up.isEmpty && until > now {
+                    statuses[app.id] = .stopping
+                    continue
+                }
+                stoppingUntil[app.id] = nil   // drained (or capped) → resume normal logic
+            }
+
             let status: AppStatus
             if up.isEmpty {
                 if let until = pendingUntil[app.id], until > now {
@@ -74,8 +90,10 @@ final class AppManager: ObservableObject {
     }
 
     func stop(_ app: ManagedApp) {
-        statuses[app.id] = .stopped
+        statuses[app.id] = .stopping
         pendingUntil[app.id] = nil
+        // Hold "Stopping" until ports drain; 10s cap covers SIGTERM + SIGKILL.
+        stoppingUntil[app.id] = Date().addingTimeInterval(10)
 
         let command = killCommand(for: app)
         DispatchQueue.global(qos: .userInitiated).async {
@@ -86,8 +104,12 @@ final class AppManager: ObservableObject {
     /// Force-stop, let the ports drain, then relaunch — all in one detached
     /// shell so the new servers reparent to launchd just like a fresh Start.
     func restart(_ app: ManagedApp) {
-        statuses[app.id] = .starting
+        statuses[app.id] = .stopping
         pendingUntil[app.id] = Date().addingTimeInterval(40)
+        // Show "Stopping" only during the brief kill window; once the old ports
+        // drain this clears and pendingUntil takes over (Starting → Running).
+        // Kept short so it expires before the new server binds (no false stop).
+        stoppingUntil[app.id] = Date().addingTimeInterval(3)
 
         let command = "\(killCommand(for: app)); sleep 2; \(launchCommand(for: app))"
         DispatchQueue.global(qos: .userInitiated).async {

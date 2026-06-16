@@ -56,6 +56,7 @@ struct MenuBarContent: View {
         case .stopped:  return "Start \(app.name)"
         case .starting: return "Stop \(app.name) (starting…)"
         case .running:  return "Stop \(app.name) (running)"
+        case .stopping: return "Stop \(app.name) (stopping…)"
         }
     }
 
