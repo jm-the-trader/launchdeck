@@ -34,6 +34,12 @@ struct MenuBarContent: View {
                     Label("    Open \(app.name) in browser", systemImage: "arrow.up.right.square")
                 }
             }
+
+            Button {
+                manager.openLog(app)
+            } label: {
+                Label("    View \(app.name) log", systemImage: "doc.text")
+            }
         }
 
         Divider()

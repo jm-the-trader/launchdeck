@@ -24,7 +24,8 @@ struct ContentView: View {
                                 onStart: { manager.start(app) },
                                 onStop: { manager.stop(app) },
                                 onRestart: { manager.restart(app) },
-                                onOpen: { manager.open(app) }
+                                onOpen: { manager.open(app) },
+                                onLogs: { manager.openLog(app) }
                             )
                         }
                     }
@@ -69,6 +70,7 @@ struct AppTile: View {
     let onStop: () -> Void
     let onRestart: () -> Void
     let onOpen: () -> Void
+    let onLogs: () -> Void
 
     private var accent: Color { Color(hex: app.color) }
 
@@ -84,6 +86,14 @@ struct AppTile: View {
                         .foregroundStyle(accent)
                 }
                 Spacer()
+                Button(action: onLogs) {
+                    Image(systemName: "doc.text")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.white.opacity(0.45))
+                .help("View log")
+                .padding(.trailing, 2)
                 statusPill
             }
 

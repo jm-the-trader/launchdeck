@@ -83,6 +83,7 @@ final class AppManager: ObservableObject {
         statuses[app.id] = .starting
         pendingUntil[app.id] = Date().addingTimeInterval(40)
 
+        appendLog(app, "START — \(app.startCommand)")
         let command = launchCommand(for: app)
         DispatchQueue.global(qos: .userInitiated).async {
             Shell.runLogin(command, interactive: true)   // needs ~/.zshrc for npm/node
@@ -95,6 +96,7 @@ final class AppManager: ObservableObject {
         // Hold "Stopping" until ports drain; 10s cap covers SIGTERM + SIGKILL.
         stoppingUntil[app.id] = Date().addingTimeInterval(10)
 
+        appendLog(app, "STOP — freeing ports \(app.ports.map(String.init).joined(separator: ", "))")
         let command = killCommand(for: app)
         DispatchQueue.global(qos: .userInitiated).async {
             Shell.runLogin(command)
@@ -111,9 +113,48 @@ final class AppManager: ObservableObject {
         // Kept short so it expires before the new server binds (no false stop).
         stoppingUntil[app.id] = Date().addingTimeInterval(3)
 
+        appendLog(app, "RESTART — \(app.startCommand)")
         let command = "\(killCommand(for: app)); sleep 2; \(launchCommand(for: app))"
         DispatchQueue.global(qos: .userInitiated).async {
             Shell.runLogin(command, interactive: true)   // needs ~/.zshrc for npm/node
+        }
+    }
+
+    /// Open an app's log file in the default viewer (Console / TextEdit) so you
+    /// can see what happened — including failures like "npm: command not found".
+    func openLog(_ app: ManagedApp) {
+        let url = logURL(for: app)
+        if !FileManager.default.fileExists(atPath: url.path) {
+            try? Data().write(to: url)   // create empty so there's something to open
+        }
+        NSWorkspace.shared.open(url)
+    }
+
+    // MARK: - Logging
+
+    private static let logStamp: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return f
+    }()
+
+    private func logURL(for app: ManagedApp) -> URL {
+        AppConfig.logDir.appendingPathComponent("\(app.id).log")
+    }
+
+    /// Append a timestamped Launch Deck line to the app's log, so the log shows
+    /// what Launch Deck *did* (the command it ran) next to the process output.
+    /// The detached server appends its own stdout/stderr to the same file.
+    private func appendLog(_ app: ManagedApp, _ message: String) {
+        let line = "\n[\(Self.logStamp.string(from: Date()))] ▶ Launch Deck: \(message)\n"
+        guard let data = line.data(using: .utf8) else { return }
+        let url = logURL(for: app)
+        if let handle = try? FileHandle(forWritingTo: url) {
+            defer { try? handle.close() }
+            handle.seekToEndOfFile()
+            handle.write(data)
+        } else {
+            try? data.write(to: url)   // file didn't exist yet
         }
     }
 

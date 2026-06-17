@@ -19,14 +19,24 @@ there onto the Dock.
 ## How it works
 
 - **Start** runs the app's `startCommand` from its directory, detached via
-  `nohup … &`. Because the launching shell exits immediately, the servers are
-  reparented to `launchd` — so quitting Launch Deck never kills your apps.
+  `nohup … &` through an **interactive** login shell (`zsh -ilc`) so your
+  `~/.zshrc` is sourced and version managers like nvm put `npm`/`node` on PATH.
+  Because the launching shell exits immediately, the servers reparent to
+  `launchd` — so quitting Launch Deck never kills your apps.
 - **Status** is detected by polling which TCP ports are in `LISTEN` (every
   2.5s). An app is *Running* once its `readyPort` (the frontend) is up,
-  *Starting* while only some ports are up.
-- **Stop** sends `SIGTERM` to whatever owns the app's ports (or runs a custom
-  `stopCommand` if you set one).
+  *Starting* while only some ports are up, *Stopping* while a kill is in flight.
+- **Stop** frees the app's ports by killing the owning **process group**
+  (`SIGTERM`, then `SIGKILL` for anything still holding on) — so a supervisor
+  like `uvicorn --reload` goes down with its workers. A custom `stopCommand`
+  overrides this.
+- **Restart** = Stop, wait for the ports to drain, then Start again.
 - **Open** opens the app's `url` in your browser.
+- **Logs** — the `doc.text` button on each tile (and "View … log" in the menu)
+  opens that app's log so you can see what happened, including failures like
+  `npm: command not found`. Launch Deck also writes its own timestamped
+  `▶ Launch Deck: START/STOP/RESTART …` lines into the log alongside the
+  server output.
 
 Per-app logs are written to
 `~/Library/Application Support/LaunchDeck/logs/<App>.log`.
