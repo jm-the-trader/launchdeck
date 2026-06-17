@@ -5,6 +5,14 @@ struct ContentView: View {
 
     private let columns = [GridItem(.adaptive(minimum: 240, maximum: 340), spacing: 18)]
 
+    /// Reads the version baked into Info.plist by build.sh (VERSION + git build #).
+    private var appVersion: String {
+        let info = Bundle.main.infoDictionary
+        let short = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+        return "v\(short) (build \(build))"
+    }
+
     var body: some View {
         ZStack {
             LinearGradient(
@@ -42,9 +50,14 @@ struct ContentView: View {
                 .font(.title2)
                 .foregroundStyle(Color(hex: "4f8cff"))
             VStack(alignment: .leading, spacing: 2) {
-                Text("Launch Deck")
-                    .font(.title2.bold())
-                    .foregroundStyle(.white)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("Launch Deck")
+                        .font(.title2.bold())
+                        .foregroundStyle(.white)
+                    Text(appVersion)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.white.opacity(0.4))
+                }
                 Text("\(manager.runningCount) running")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.5))

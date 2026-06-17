@@ -77,6 +77,19 @@ and presents two scenes that share it: a single `Window` (the grid) and a
   why the escalation matters. A `ManagedApp.stopCommand`, if set, overrides this.
   **Restart** = `killCommand; sleep 2; launchCommand` in one detached shell.
 
+## Versioning (bump on every change)
+
+The human-readable version lives in the **`VERSION`** file (e.g. `1.1.0`).
+`build.sh` reads it into `CFBundleShortVersionString` and sets
+`CFBundleVersion` from the git commit count (`git rev-list --count HEAD`), so
+the build number auto-increments. The version is shown in the window header and
+the menu-bar title (read at runtime from `Bundle.main.infoDictionary`).
+
+**Whenever you make a code change, bump `VERSION`** — patch for fixes
+(`1.1.0` → `1.1.1`), minor for features (`1.1.0` → `1.2.0`) — then rebuild so
+the running app visibly reflects the update. This is how the user can confirm
+they're on the latest build.
+
 ## Conventions
 
 - Match the existing Swift style: small focused files, `@MainActor` on

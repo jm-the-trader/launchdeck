@@ -6,7 +6,7 @@ struct MenuBarContent: View {
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        Text("Launch Deck — \(manager.runningCount) running")
+        Text("Launch Deck \(appVersion) — \(manager.runningCount) running")
 
         Divider()
 
@@ -55,6 +55,10 @@ struct MenuBarContent: View {
 
         Button("Quit Launch Deck") { NSApp.terminate(nil) }
             .keyboardShortcut("q")
+    }
+
+    private var appVersion: String {
+        "v" + ((Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "?")
     }
 
     private func actionLabel(for app: ManagedApp, status: AppStatus) -> String {

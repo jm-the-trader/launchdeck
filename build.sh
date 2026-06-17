@@ -5,7 +5,12 @@ cd "$(dirname "$0")"
 
 APP="LaunchDeck.app"
 ARCH="$(uname -m)"
-echo "▶ Building Launch Deck for ${ARCH}…"
+
+# Version (human-readable) comes from the VERSION file; bump it on each change.
+# Build number auto-increments from the git commit count, so it always rises.
+VERSION="$(tr -d ' \n' < VERSION 2>/dev/null || echo 1.0.0)"
+BUILD="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
+echo "▶ Building Launch Deck ${VERSION} (build ${BUILD}) for ${ARCH}…"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
@@ -20,8 +25,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleIdentifier</key><string>com.michael.launchdeck</string>
   <key>CFBundleExecutable</key><string>LaunchDeck</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>1.0</string>
-  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleShortVersionString</key><string>${VERSION}</string>
+  <key>CFBundleVersion</key><string>${BUILD}</string>
   <key>LSMinimumSystemVersion</key><string>13.0</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>CFBundleIconFile</key><string>AppIcon</string>
